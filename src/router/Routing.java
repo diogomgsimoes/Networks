@@ -241,15 +241,16 @@ public class Routing {
             }
             win.Log(aux+")\n");
             
-            Date date = new Date();
-            
-            RouterInfo router_info = new RouterInfo(sender, data, seq, TTL, date, win);
+            Router router = new Router();
+            RouterInfo router_info = new RouterInfo(router, sender, seq, TTL, data);
 
 //    public Date date;
 //    /** Reference to the main window of the GUI */
 //    private Router win;
 
             map.put(sender, router_info);
+            //send_local_ROUTE(false);
+            
                     
             // The contents of the received ROUTE packet are stored in
             //      sender, seq, TTL, data
