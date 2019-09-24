@@ -105,7 +105,7 @@ public class Router extends javax.swing.JFrame {
         jScrollPane3 = new javax.swing.JScrollPane();
         logTextArea = new javax.swing.JTextArea();
 
-        setTitle("RIT1 by ?????/?????/?????");
+        setTitle("RIT1 by 50236/50292/50732");
         setAlwaysOnTop(true);
         setMinimumSize(new java.awt.Dimension(380, 496));
         addWindowListener(new java.awt.event.WindowAdapter() {
