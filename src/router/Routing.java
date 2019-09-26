@@ -42,7 +42,7 @@ public class Routing {
     /** Minimum interval between consecutive ROUTE packets (ms) */
     private final int min_interval;
     /** TTL value used in sent ROUTE packets */
-    private final int local_TTL;
+    private int local_TTL;
     /** Neighbour list */
     private final NeighbourList neig;
     /** Reference to main window with GUI */
@@ -58,7 +58,6 @@ public class Routing {
     private int route_seq;
     /** Timer object that sends ROUTE packets */
     private javax.swing.Timer timer_announce;
-    public int count = 0;
 
     /**
      * Create a new instance of a routing object, that encapsulates routing processes
@@ -241,17 +240,23 @@ public class Routing {
             }
             win.Log(aux+")\n");
             
-            //Router router = new Router();
             RouterInfo router_info = new RouterInfo(win, sender, seq, TTL, data);
+            
+        
+            if(local_TTL-1 > 0) {
+                router_info = new RouterInfo(win, sender, seq, local_TTL, data);
+                local_TTL--;
+            } else {
+                local_TTL = 20;
+            }
+      
 
 //    public Date date;
 //    /** Reference to the main window of the GUI */
 //    private Router win;
 
             map.put(sender, router_info);
-            send_local_ROUTE(false);
             
-                    
             // The contents of the received ROUTE packet are stored in
             //      sender, seq, TTL, data
             // The packet was received from ip,dp.getPort()
@@ -368,18 +373,6 @@ public class Routing {
             // Place here the code to send unicast if (!use_multicast)
             
             DatagramPacket dp = make_ROUTE_packet(win.local_name(), route_seq++, local_TTL, vec);   
-            
-            if(!use_multicast){
-                 
-                if(local_TTL-count>0){
-                    
-                    dp = make_ROUTE_packet(win.local_name(), route_seq++, local_TTL-count, vec); 
-                    count += 1;
-                }
-                else{
-                    count = 0;
-                }
-            }
             
             mdaemon.send_packet(dp);
             
