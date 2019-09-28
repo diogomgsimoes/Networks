@@ -65,6 +65,8 @@ public final class RoutingTable {
     public RouteEntry get_RouteEntry(char dest) {
         if (!is_valid())
             return null;
+        if(rtab == null)
+            return null;
         return rtab.get(dest);
     }
     

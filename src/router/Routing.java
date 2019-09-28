@@ -42,7 +42,7 @@ public class Routing {
     /** Minimum interval between consecutive ROUTE packets (ms) */
     private final int min_interval;
     /** TTL value used in sent ROUTE packets */
-    private int local_TTL;
+    private final int local_TTL;
     /** Neighbour list */
     private final NeighbourList neig;
     /** Reference to main window with GUI */
@@ -243,12 +243,12 @@ public class Routing {
             RouterInfo router_info = new RouterInfo(win, sender, seq, TTL, data);
             
         
-            if(local_TTL-1 > 0) {
-                router_info = new RouterInfo(win, sender, seq, local_TTL, data);
-                local_TTL--;
-            } else {
-                local_TTL = 20;
-            }
+//            if(local_TTL-1 > 0) {
+//                router_info = new RouterInfo(win, sender, seq, local_TTL, data);
+//                local_TTL--;
+//            } else {
+//                local_TTL = 20;
+//            }
       
 
 //    public Date date;
@@ -323,24 +323,48 @@ public class Routing {
      * @param origin name of the starting router
      * @return the routing table calculated
      */
+    
+    // TODO: -> figure out how to treat next_hop and multi hops
+    //       -> how to restart the comparison, associated with the problem listed above
+    //       -> if a connection is considered useless, should it be removed? .... how?
+    
     public RoutingTable run_dijkstra(char origin) {
         char nextN;
         RouteEntry re;
-
-        RoutingTable tab= new RoutingTable();
+        
+        // Personal variables 
+        RouteEntry result;
+        int best_dist = 1000;
+        char dest_aux = 'Z';
 
         // Create route entry with local node
-        re= new RouteEntry(origin, ' ', 0);
-        re.set_final();     // Set the local node final
-        tab.add_route(re); // Add the route entry to the routing table
+        RoutingTable tab = new RoutingTable();           
         
-        // Implement the Dijkstra algorithm here
-        // Read carefully the pages 366-369 of Computer Networks 5th edition
-        // to understand how it is done
-        // Remember that there is a maximum distance allowed!
-        // ...
- 
-        // Return the table
+        re = new RouteEntry(origin, ' ', 0);
+        // Set the local node final
+        re.set_final();            
+        // Add the route entry to the routing table
+        tab.add_route(re);                               
+        
+        tab.Log_routing_table(win);
+
+        for (Entry test : neig.local_vec(true)) {
+            if (test.dist < best_dist && test.dist != 0) {
+                best_dist = test.dist;
+                dest_aux = test.dest;
+            }
+            // Debug code
+            // System.out.print("run\n");                       
+        }
+        
+        // next_Hop(dest_aux) or tab.nextHop(dest_aux) -> doesn't work
+        
+        result = new RouteEntry(dest_aux, ' ', best_dist);
+        result.set_final();
+        tab.add_route(result);
+        // Debug code
+        System.out.println(tab.get_routeset());
+           
         return tab;
     }
 
@@ -442,7 +466,7 @@ public class Routing {
         java.awt.event.ActionListener act;   
         act = new java.awt.event.ActionListener(){
             public void actionPerformed(java.awt.event.ActionEvent evt) {   
-                send_local_ROUTE(true);
+                update_routing_table();
             }
         }; 
             
