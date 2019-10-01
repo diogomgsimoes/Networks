@@ -331,11 +331,7 @@ public class Routing {
     public RoutingTable run_dijkstra(char origin) {
         char nextN;
         RouteEntry re;
-        
-        // Personal variables 
         RouteEntry result;
-        int best_dist = 1000;
-        char dest_aux = 'Z';
 
         // Create route entry with local node
         RoutingTable tab = new RoutingTable();           
@@ -347,25 +343,37 @@ public class Routing {
         tab.add_route(re);                               
         
         tab.Log_routing_table(win);
-
-        for (Entry test : neig.local_vec(true)) {
-            if (test.dist < best_dist && test.dist != 0) {
-                best_dist = test.dist;
-                dest_aux = test.dest;
-            }
-            // Debug code
-            // System.out.print("run\n");                       
+        
+        // Populate the routing table
+        for (Entry neigh : neig.local_vec(false)) {
+            result = new RouteEntry(neigh.dest, neigh.dest, neigh.dist);
+            tab.add_route(result);
         }
         
-        // next_Hop(dest_aux) or tab.nextHop(dest_aux) -> doesn't work
-        
-        result = new RouteEntry(dest_aux, ' ', best_dist);
-        result.set_final();
-        tab.add_route(result);
-        // Debug code
-        System.out.println(tab.get_routeset());
-           
+        try {
+            for (RouteEntry routeE : tab.get_routeset()) {
+                if (!routeE.ok) {
+                    if (map.get(routeE.dest) != null) {
+                        for (Entry entry : map.get(routeE.dest).vec) {
+                            if (tab.get_RouteEntry(entry.dest) != null) {
+                                result = tab.get_RouteEntry(entry.dest);
+                                if ((entry.dist + routeE.dist) < result.dist) 
+                                    result.update_dist(entry.dist + routeE.dist);
+                            } 
+                            else {
+                                result = new RouteEntry(entry.dest, routeE.dest, entry.dist + routeE.dist);
+                                result.set_final();
+                                tab.add_route(result);
+                            }
+                        }
+                    }       
+                }
+            }
+        } catch(Throwable throwable) {
+            win.Log("Error: " + throwable + "\n");
+        }
         return tab;
+
     }
 
     /*******************************
