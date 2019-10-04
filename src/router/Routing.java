@@ -249,6 +249,8 @@ public class Routing {
 //            } else {
 //                local_TTL = 20;
 //            }
+
+            //neig.locate_neig(ip, n)
       
 
 //    public Date date;
@@ -311,6 +313,19 @@ public class Routing {
         return rtab;
     }
     
+    public boolean check_if_final(RoutingTable rt){
+        
+         boolean rt_final = true;
+        
+         for (RouteEntry routeE : rt.get_routeset()) {
+             
+             if(!routeE.is_final())
+                 rt_final = false;
+            
+         }
+         
+         return rt_final;
+    }
     
     /*******************************
      * Dijkstra implementation
@@ -328,8 +343,9 @@ public class Routing {
     //       -> how to restart the comparison, associated with the problem listed above
     //       -> if a connection is considered useless, should it be removed? .... how?
     
-    public RoutingTable run_dijkstra(char origin) {
+    public RoutingTable run_dijkstra(char origin){
         char nextN;
+        int bestNeighDist;
         RouteEntry re;
         RouteEntry result;
 
@@ -342,39 +358,111 @@ public class Routing {
         // Add the route entry to the routing table
         tab.add_route(re);                               
         
-        tab.Log_routing_table(win);
-        
         // Populate the routing table
         for (Entry neigh : neig.local_vec(false)) {
             result = new RouteEntry(neigh.dest, neigh.dest, neigh.dist);
             tab.add_route(result);
         }
         
-        try {
-            for (RouteEntry routeE : tab.get_routeset()) {
-                if (!routeE.ok) {
-                    if (map.get(routeE.dest) != null) {
-                        for (Entry entry : map.get(routeE.dest).vec) {
-                            if (tab.get_RouteEntry(entry.dest) != null) {
-                                result = tab.get_RouteEntry(entry.dest);
-                                if ((entry.dist + routeE.dist) < result.dist) 
-                                    result.update_dist(entry.dist + routeE.dist);
-                            } 
-                            else {
-                                result = new RouteEntry(entry.dest, routeE.dest, entry.dist + routeE.dist);
-                                result.set_final();
-                                tab.add_route(result);
+        HashMap<Character, RouterInfo> mapClone = map;
+        
+        Collection<RouteEntry> routeset = tab.get_routeset();
+        Iterator a = routeset.iterator();
+        
+        
+            while(!check_if_final(tab)){
+                
+               nextN = 'Z';
+               bestNeighDist = 100;
+                
+               for (RouteEntry routeE : tab.get_routeset()) {
+                   
+                   if(bestNeighDist > routeE.dist && !routeE.is_final()){
+                       nextN = routeE.dest;
+                       bestNeighDist = routeE.dist;
+                   }
+                   
+               }
+               
+               System.out.print(nextN);
+               
+               RouteEntry nodeRe = tab.get_RouteEntry(nextN);
+               tab.get_RouteEntry(nextN).set_final();
+               
+               if(mapClone.get(nextN) != null)
+                for(Entry C : mapClone.get(nextN).vec){
+                    
+                    if(tab.get_RouteEntry(C.dest) != null){
+                        RouteEntry fromTab = tab.get_RouteEntry(C.dest);
+                        if(fromTab.dist > (C.dist + nodeRe.dist)){
+                            if(fromTab.next_hop != nodeRe.next_hop){
+                                fromTab = new RouteEntry(fromTab.next_hop, nodeRe.next_hop, nodeRe.dist + C.dist);
                             }
+                            else
+                                fromTab.update_dist(nodeRe.dist + C.dist);
+                            tab.add_route(fromTab);
                         }
-                    }       
+                       
+                    }
+                    else{
+                        
+                        RouteEntry newN = new RouteEntry(C.dest, nodeRe.next_hop, nodeRe.dist + C.dist);
+                        tab.add_route(newN);
+                    }    
                 }
             }
-        } catch(Throwable throwable) {
-            win.Log("Error: " + throwable + "\n");
-        }
+                   
+//                        for (Entry entry : mapClone.get(b.dest).vec) {
+//                            if (tab.get_RouteEntry(entry.dest) != null) {
+//                                result = tab.get_RouteEntry(entry.dest);
+//                                if(result.next_hop != b.next_hop){
+//                                   if ((entry.dist + b.dist) < result.dist){
+//                                    result = new RouteEntry(result.dest, b.next_hop, b.dist + result.dist);
+//                                    tab.add_route(result);
+//                                   }
+//                                }
+//                            } 
+//                            else {
+//                                result = new RouteEntry(entry.dest, b.dest, entry.dist + b.dist);
+//                                tab.add_route(result);
+//                            }
+//
+//                        }
+//                    }       
+        
+         
+//        while() {
+//
+//            if (!a.next().is_final()) {
+//                //Neighbours
+//                if (mapClone.get(routeE.dest) != null) {
+//                    for (Entry entry : mapClone.get(routeE.dest).vec) {
+//                        if (tab.get_RouteEntry(entry.dest) != null) {
+//                            result = tab.get_RouteEntry(entry.dest);
+//                            if(result.has_next()){
+//                               result = new RouteEntry(result.dest, routeE.next_hop, result.dist);
+//                               tab.add_route(result);
+//                            }
+//                            if ((entry.dist + routeE.dist) < result.dist)
+//                                result.update_dist(entry.dist + routeE.dist);
+//                        } 
+//                        else {
+//                            result = new RouteEntry(entry.dest, ' ', entry.dist + routeE.dist);
+//                            tab.add_route(result);
+//                        }
+//
+//                    }
+//                }       
+//            }
+//
+//        }
+            
         return tab;
-
+        
     }
+ 
+    
+   
 
     /*******************************
      * ROUTE flooding implementation
@@ -403,6 +491,8 @@ public class Routing {
         try {
             // WARNING: always use multicast
             // Place here the code to send unicast if (!use_multicast)
+            
+            //neig.send_packet(ds, dp, exc);
             
             DatagramPacket dp = make_ROUTE_packet(win.local_name(), route_seq++, local_TTL, vec);   
             
