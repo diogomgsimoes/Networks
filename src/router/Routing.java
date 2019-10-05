@@ -339,11 +339,8 @@ public class Routing {
      * @return the routing table calculated
      */
     
-    // TODO: -> figure out how to treat next_hop and multi hops
-    //       -> how to restart the comparison, associated with the problem listed above
-    //       -> if a connection is considered useless, should it be removed? .... how?
-    
-    public RoutingTable run_dijkstra(char origin){
+public RoutingTable run_dijkstra(char origin){
+        
         char nextN;
         int bestNeighDist;
         RouteEntry re;
@@ -351,7 +348,6 @@ public class Routing {
 
         // Create route entry with local node
         RoutingTable tab = new RoutingTable();           
-        
         re = new RouteEntry(origin, ' ', 0);
         // Set the local node final
         re.set_final();            
@@ -365,104 +361,45 @@ public class Routing {
         }
         
         HashMap<Character, RouterInfo> mapClone = map;
-        
-        Collection<RouteEntry> routeset = tab.get_routeset();
-        Iterator a = routeset.iterator();
-        
-        
-            while(!check_if_final(tab)){
                 
-               nextN = 'Z';
-               bestNeighDist = 100;
-                
-               for (RouteEntry routeE : tab.get_routeset()) {
-                   
-                   if(bestNeighDist > routeE.dist && !routeE.is_final()){
-                       nextN = routeE.dest;
-                       bestNeighDist = routeE.dist;
-                   }
-                   
-               }
-               
-               System.out.print(nextN);
-               
-               RouteEntry nodeRe = tab.get_RouteEntry(nextN);
-               tab.get_RouteEntry(nextN).set_final();
-               
-               if(mapClone.get(nextN) != null)
+        while(!check_if_final(tab)){
+
+            nextN = 'Z';
+            bestNeighDist = 100;
+
+            for (RouteEntry routeE : tab.get_routeset()) {
+                if(bestNeighDist > routeE.dist && !routeE.is_final()){
+                    nextN = routeE.dest;
+                    bestNeighDist = routeE.dist;
+                }
+            }           
+
+            RouteEntry nodeRe = tab.get_RouteEntry(nextN);
+            tab.get_RouteEntry(nextN).set_final();           
+
+            if(mapClone.get(nextN) != null) {
                 for(Entry C : mapClone.get(nextN).vec){
-                    
                     if(tab.get_RouteEntry(C.dest) != null){
                         RouteEntry fromTab = tab.get_RouteEntry(C.dest);
                         if(fromTab.dist > (C.dist + nodeRe.dist)){
                             if(fromTab.next_hop != nodeRe.next_hop){
-                                fromTab = new RouteEntry(fromTab.next_hop, nodeRe.next_hop, nodeRe.dist + C.dist);
+                                fromTab = new RouteEntry(fromTab.dest, nodeRe.next_hop, nodeRe.dist + C.dist);
                             }
                             else
                                 fromTab.update_dist(nodeRe.dist + C.dist);
                             tab.add_route(fromTab);
                         }
-                       
                     }
-                    else{
-                        
+                    else {
                         RouteEntry newN = new RouteEntry(C.dest, nodeRe.next_hop, nodeRe.dist + C.dist);
                         tab.add_route(newN);
                     }    
                 }
             }
-                   
-//                        for (Entry entry : mapClone.get(b.dest).vec) {
-//                            if (tab.get_RouteEntry(entry.dest) != null) {
-//                                result = tab.get_RouteEntry(entry.dest);
-//                                if(result.next_hop != b.next_hop){
-//                                   if ((entry.dist + b.dist) < result.dist){
-//                                    result = new RouteEntry(result.dest, b.next_hop, b.dist + result.dist);
-//                                    tab.add_route(result);
-//                                   }
-//                                }
-//                            } 
-//                            else {
-//                                result = new RouteEntry(entry.dest, b.dest, entry.dist + b.dist);
-//                                tab.add_route(result);
-//                            }
-//
-//                        }
-//                    }       
-        
-         
-//        while() {
-//
-//            if (!a.next().is_final()) {
-//                //Neighbours
-//                if (mapClone.get(routeE.dest) != null) {
-//                    for (Entry entry : mapClone.get(routeE.dest).vec) {
-//                        if (tab.get_RouteEntry(entry.dest) != null) {
-//                            result = tab.get_RouteEntry(entry.dest);
-//                            if(result.has_next()){
-//                               result = new RouteEntry(result.dest, routeE.next_hop, result.dist);
-//                               tab.add_route(result);
-//                            }
-//                            if ((entry.dist + routeE.dist) < result.dist)
-//                                result.update_dist(entry.dist + routeE.dist);
-//                        } 
-//                        else {
-//                            result = new RouteEntry(entry.dest, ' ', entry.dist + routeE.dist);
-//                            tab.add_route(result);
-//                        }
-//
-//                    }
-//                }       
-//            }
-//
-//        }
-            
-        return tab;
-        
+        }
+               
+        return tab;   
     }
- 
-    
-   
 
     /*******************************
      * ROUTE flooding implementation
