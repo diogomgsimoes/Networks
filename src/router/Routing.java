@@ -313,18 +313,25 @@ public class Routing {
         return rtab;
     }
     
+    /**
+     * Check if a routing table has all nodes final
+     *
+     * @param RoutingTable routing table
+     * @return true if all nodes are final, false if not
+     */
+    
     public boolean check_if_final(RoutingTable rt){
-        
-         boolean rt_final = true;
         
          for (RouteEntry routeE : rt.get_routeset()) {
              
+             // Return immediately false if one of the nodes are tentative
              if(!routeE.is_final())
-                 rt_final = false;
+                 return false;
             
          }
          
-         return rt_final;
+         // All nodes are final, return true
+         return true;
     }
     
     /*******************************
@@ -341,10 +348,10 @@ public class Routing {
     
 public RoutingTable run_dijkstra(char origin){
         
-        char nextN;
-        int bestNeighDist;
-        RouteEntry re;
-        RouteEntry result;
+        char nextN;                   // Next node to process
+        int bestNeighDist;            // Best neighbour distance
+        RouteEntry neighRouteEntry;   // Neighbour RouteEntry
+        RouteEntry re;                // RouteEntry with local node
 
         // Create route entry with local node
         RoutingTable tab = new RoutingTable();           
@@ -356,50 +363,74 @@ public RoutingTable run_dijkstra(char origin){
         
         // Populate the routing table
         for (Entry neigh : neig.local_vec(false)) {
-            result = new RouteEntry(neigh.dest, neigh.dest, neigh.dist);
-            tab.add_route(result);
+            neighRouteEntry = new RouteEntry(neigh.dest, neigh.dest, neigh.dist);
+            tab.add_route(neighRouteEntry);
         }
         
+        // Copy of the map to prevent exceptions
         HashMap<Character, RouterInfo> mapClone = map;
-                
+        
+        // While the routing table has nodes tentative
         while (!check_if_final(tab)){
 
-            nextN = 'Z';
+            nextN = '1';
             bestNeighDist = 100;
 
+            // For cycle to get the tentative node that is at minimum distance 
             for (RouteEntry routeE : tab.get_routeset()) {
                 if (bestNeighDist > routeE.dist && !routeE.is_final()){
                     nextN = routeE.dest;
                     bestNeighDist = routeE.dist;
                 }
-            }           
-
+            }  
+            
+            // Get the RouteEntry of the node inside the routing table and set it final
             RouteEntry nodeRe = tab.get_RouteEntry(nextN);
             tab.get_RouteEntry(nextN).set_final();           
             
+            // If the map has the RouterInfo of the currentNode and it is valid
             if (mapClone.get(nextN) != null && mapClone.get(nextN).vec_valid()) {
-                for (Entry C : mapClone.get(nextN).vec){
-                    if ((C.dist + nodeRe.dist) <= MAX_ENTRY_VEC_LEN) {
-                        if (tab.get_RouteEntry(C.dest) != null){
-                            RouteEntry fromTab = tab.get_RouteEntry(C.dest);
-                            if (fromTab.dist > (C.dist + nodeRe.dist)){
+                
+                // Iterate through all Entries contained on Rounterinfo
+                for (Entry fromMap : mapClone.get(nextN).vec){
+                    
+                    // Check if the distance is less than 30 (Requirement)
+                    if ((fromMap.dist + nodeRe.dist) < MAX_ENTRY_VEC_LEN) {
+                        
+                        // Check if the RoutingTable has already a RouteEntry
+                        if (tab.get_RouteEntry(fromMap.dest) != null){
+                            
+                            // Get the RouteEntry from RoutingTable
+                            RouteEntry fromTab = tab.get_RouteEntry(fromMap.dest);
+                            
+                            // Check if a minimum distance is found
+                            if (fromTab.dist > (fromMap.dist + nodeRe.dist)){
+                                
+                                // Check if the next_hop is the same
                                 if (fromTab.next_hop != nodeRe.next_hop){
-                                    fromTab = new RouteEntry(fromTab.dest, nodeRe.next_hop, nodeRe.dist + C.dist);
+                                    
+                                    // Create a new RouteEntry with the new values
+                                    fromTab = new RouteEntry(fromTab.dest, nodeRe.next_hop, nodeRe.dist + fromMap.dist);
                                 }
                                 else
-                                    fromTab.update_dist(nodeRe.dist + C.dist);
+                                    // Update only the distance
+                                    fromTab.update_dist(nodeRe.dist + fromMap.dist);
+                                
+                                // Add the updated RouteEntry
                                 tab.add_route(fromTab);
                             }
                         }
+                        
+                        // Create a new RouteEntry and adds it to the RoutingTable
                         else {
-                            RouteEntry newN = new RouteEntry(C.dest, nodeRe.next_hop, nodeRe.dist + C.dist);
+                            RouteEntry newN = new RouteEntry(fromMap.dest, nodeRe.next_hop, nodeRe.dist + fromMap.dist);
                             tab.add_route(newN);
                         }
                     }    
                 }
             }
         }
-               
+           
         return tab;   
     }
 
