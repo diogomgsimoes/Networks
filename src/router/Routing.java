@@ -395,7 +395,7 @@ public RoutingTable run_dijkstra(char origin){
                 for (Entry fromMap : mapClone.get(nextN).vec){
                     
                     // Check if the distance is less than 30 (Requirement)
-                    if ((fromMap.dist + nodeRe.dist) < MAX_ENTRY_VEC_LEN) {
+                    if ((fromMap.dist + nodeRe.dist) <= MAX_ENTRY_VEC_LEN) {
                         
                         // Check if the RoutingTable has already a RouteEntry
                         if (tab.get_RouteEntry(fromMap.dest) != null){
