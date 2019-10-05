@@ -362,13 +362,13 @@ public RoutingTable run_dijkstra(char origin){
         
         HashMap<Character, RouterInfo> mapClone = map;
                 
-        while(!check_if_final(tab)){
+        while (!check_if_final(tab)){
 
             nextN = 'Z';
             bestNeighDist = 100;
 
             for (RouteEntry routeE : tab.get_routeset()) {
-                if(bestNeighDist > routeE.dist && !routeE.is_final()){
+                if (bestNeighDist > routeE.dist && !routeE.is_final()){
                     nextN = routeE.dest;
                     bestNeighDist = routeE.dist;
                 }
@@ -376,23 +376,25 @@ public RoutingTable run_dijkstra(char origin){
 
             RouteEntry nodeRe = tab.get_RouteEntry(nextN);
             tab.get_RouteEntry(nextN).set_final();           
-
-            if(mapClone.get(nextN) != null) {
-                for(Entry C : mapClone.get(nextN).vec){
-                    if(tab.get_RouteEntry(C.dest) != null){
-                        RouteEntry fromTab = tab.get_RouteEntry(C.dest);
-                        if(fromTab.dist > (C.dist + nodeRe.dist)){
-                            if(fromTab.next_hop != nodeRe.next_hop){
-                                fromTab = new RouteEntry(fromTab.dest, nodeRe.next_hop, nodeRe.dist + C.dist);
+            
+            if (mapClone.get(nextN) != null && mapClone.get(nextN).vec_valid()) {
+                for (Entry C : mapClone.get(nextN).vec){
+                    if ((C.dist + nodeRe.dist) <= MAX_ENTRY_VEC_LEN) {
+                        if (tab.get_RouteEntry(C.dest) != null){
+                            RouteEntry fromTab = tab.get_RouteEntry(C.dest);
+                            if (fromTab.dist > (C.dist + nodeRe.dist)){
+                                if (fromTab.next_hop != nodeRe.next_hop){
+                                    fromTab = new RouteEntry(fromTab.dest, nodeRe.next_hop, nodeRe.dist + C.dist);
+                                }
+                                else
+                                    fromTab.update_dist(nodeRe.dist + C.dist);
+                                tab.add_route(fromTab);
                             }
-                            else
-                                fromTab.update_dist(nodeRe.dist + C.dist);
-                            tab.add_route(fromTab);
                         }
-                    }
-                    else {
-                        RouteEntry newN = new RouteEntry(C.dest, nodeRe.next_hop, nodeRe.dist + C.dist);
-                        tab.add_route(newN);
+                        else {
+                            RouteEntry newN = new RouteEntry(C.dest, nodeRe.next_hop, nodeRe.dist + C.dist);
+                            tab.add_route(newN);
+                        }
                     }    
                 }
             }
