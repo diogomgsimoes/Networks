@@ -209,13 +209,13 @@ public class Routing {
      * @param mcast     received from multicast socket
      * @return true if packet was handled successfully, false if error
      */
-    public boolean process_ROUTE(char sender, DatagramPacket dp, 
-            String ip, DataInputStream dis, boolean mcast) {
+    public boolean process_ROUTE(char sender, DatagramPacket dp, String ip, DataInputStream dis, boolean mcast) {
         
         if (sender == local_name) {
             win.Log2("Packet loopback in process_ROUTE - ignored\n");
             return true;
         }
+        
         try {
             win.Log("PKT_ROUTE("+sender+",");
             String aux;
@@ -239,29 +239,25 @@ public class Routing {
                 aux+= (i==0 ? "" : " ; ") + data[i].toString();
             }
             win.Log(aux+")\n");
-            
+              
             RouterInfo router_info = new RouterInfo(win, sender, seq, TTL, data);
+  
+            if (mcast) {
+                System.out.println("mcast");
+                if (router_info.vec_valid()) {
+                    System.out.println("vec_valid");
+                    if (router_info.TTL - 1 > 0) {
+                        router_info.update_vec(data, seq, TTL - 1);
+                        System.out.println("dá");
+                    }
+                    else {
+                        router_info.update_vec(data, seq, local_TTL);
+                        System.out.println("n dá");
+                    }
+                }
+            }
             
-        
-//            if(local_TTL-1 > 0) {
-//                router_info = new RouterInfo(win, sender, seq, local_TTL, data);
-//                local_TTL--;
-//            } else {
-//                local_TTL = 20;
-//            }
-
-            //neig.locate_neig(ip, n)
-      
-
-//    public Date date;
-//    /** Reference to the main window of the GUI */
-//    private Router win;
-
             map.put(sender, router_info);
-            
-            // The contents of the received ROUTE packet are stored in
-            //      sender, seq, TTL, data
-            // The packet was received from ip,dp.getPort()
             
             // For multicast flooding :
             //  You should locate the corresponding RouterInfo object in map
@@ -294,8 +290,8 @@ public class Routing {
      * @param dis input stream
      * @return true if handled successfully, false otherwise
      */
-    public boolean process_multicast_ROUTE(char sender, DatagramPacket dp,
-            String ip, DataInputStream dis) {
+    public boolean process_multicast_ROUTE(char sender, DatagramPacket dp, String ip, DataInputStream dis) {
+        
         if (sender == local_name) {
             // Packet loopback - ignore
             return true;
@@ -316,7 +312,7 @@ public class Routing {
     /**
      * Check if a routing table has all nodes final
      *
-     * @param RoutingTable routing table
+     * @param rt routing table
      * @return true if all nodes are final, false if not
      */
     
@@ -445,6 +441,11 @@ public RoutingTable run_dijkstra(char origin){
      * @return true if successful, false otherwise
      */
     public boolean send_local_ROUTE(boolean use_multicast) {
+        
+        DatagramPacket dp;
+        RouterInfo ri;
+        Character c = 'z';
+
         if (neig.is_empty()) {
             win.Log("send_local_ROUTE() skipped - empty neighbour list\n");
             return false;
@@ -452,22 +453,23 @@ public RoutingTable run_dijkstra(char origin){
 
         win.Log("send_local_ROUTE(multicast only)\n");
 
-        //
         Entry[] vec = local_vec();
         if (vec == null) { // No vector
             return false;
         }
         
         try {
-            // WARNING: always use multicast
-            // Place here the code to send unicast if (!use_multicast)
-            
-            //neig.send_packet(ds, dp, exc);
-            
-            DatagramPacket dp = make_ROUTE_packet(win.local_name(), route_seq++, local_TTL, vec);   
-            
-            mdaemon.send_packet(dp);
-            
+            if(!use_multicast) {
+                c = Arrays.toString(vec).charAt(1);
+                ri = map.get(c);
+                dp = make_ROUTE_packet(win.local_name(), route_seq++, ri.TTL, vec);
+                neig.send_packet(ds, dp, neig.locate_neig(ri.name));
+            }
+            else {
+                dp = make_ROUTE_packet(win.local_name(), route_seq++, local_TTL, vec); 
+                mdaemon.send_packet(dp);
+            }
+                
             lastSending = new Date();
             win.ROUTE_snt++;
             win.ROUTE_loc++;
