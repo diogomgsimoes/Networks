@@ -211,6 +211,8 @@ public class Routing {
      */
     public boolean process_ROUTE(char sender, DatagramPacket dp, String ip, DataInputStream dis, boolean mcast) {
         
+        char nei;
+        
         if (sender == local_name) {
             win.Log2("Packet loopback in process_ROUTE - ignored\n");
             return true;
@@ -241,39 +243,30 @@ public class Routing {
             win.Log(aux+")\n");
               
             RouterInfo router_info = new RouterInfo(win, sender, seq, TTL, data);
-  
-            if (mcast) {
-                System.out.println("mcast");
-                if (router_info.vec_valid()) {
-                    System.out.println("vec_valid");
-                    if (router_info.TTL - 1 > 0) {
-                        router_info.update_vec(data, seq, TTL - 1);
-                        System.out.println("dá");
-                    }
-                    else {
-                        router_info.update_vec(data, seq, local_TTL);
-                        System.out.println("n dá");
-                    }
+            
+            if (map.get(sender) != null) {
+                RouterInfo fromMap = map.get(sender);
+                //&& router_info.vec_valid()
+                if ((fromMap.seq < seq)) {
+                    
+                    router_info.TTL = fromMap.TTL;
+                    map.replace(sender, router_info);
                 }
             }
+            else
+                map.put(sender, router_info);
             
-            map.put(sender, router_info);
-            
-            // For multicast flooding :
-            //  You should locate the corresponding RouterInfo object in map
-            //      If no one exists, you should create a new one and place it in map
-            //      If one exists, you should test seq and the object validity, before updating it
-            
-            // For unicast flooding:
-            //  You do the multicast actions
-            //  You also need to get the sending neigbour and reflood the packet to all other neighbors
-            //      decrementing TTL
-            // ...
-            
-            // When "Send If Changes" is on:
-            //  You need to compare the vector with the previously received one (if valid),
-            //      and call network_changed if they differ
-
+            if (!mcast) {
+                if (router_info.TTL - 1 > 0) {
+                    router_info.update_vec(data, seq, router_info.TTL - 1);
+                    //map.replace(sender, router_info);
+                    dp = make_ROUTE_packet(win.local_name(), route_seq++, router_info.TTL, data);
+                    TTL--;
+                    neig.send_packet(ds, dp, neig.locate_neig(sender)); 
+                    
+                }
+            }
+           
             return true;    // If everything was done well
         } catch (IOException e) {
             win.Log("\nERROR - Packet too short\n");
@@ -442,10 +435,6 @@ public RoutingTable run_dijkstra(char origin){
      */
     public boolean send_local_ROUTE(boolean use_multicast) {
         
-        DatagramPacket dp;
-        RouterInfo ri;
-        Character c = 'z';
-
         if (neig.is_empty()) {
             win.Log("send_local_ROUTE() skipped - empty neighbour list\n");
             return false;
@@ -458,18 +447,15 @@ public RoutingTable run_dijkstra(char origin){
             return false;
         }
         
+        DatagramPacket dp = make_ROUTE_packet(win.local_name(), route_seq++, local_TTL, vec); 
+        //c = Arrays.toString(vec).
+        
         try {
-            if(!use_multicast) {
-                c = Arrays.toString(vec).charAt(1);
-                ri = map.get(c);
-                dp = make_ROUTE_packet(win.local_name(), route_seq++, ri.TTL, vec);
-                neig.send_packet(ds, dp, neig.locate_neig(ri.name));
-            }
-            else {
-                dp = make_ROUTE_packet(win.local_name(), route_seq++, local_TTL, vec); 
+            if(!use_multicast) 
+                neig.send_packet(ds, dp, null);
+            else 
                 mdaemon.send_packet(dp);
-            }
-                
+      
             lastSending = new Date();
             win.ROUTE_snt++;
             win.ROUTE_loc++;
@@ -612,11 +598,6 @@ public RoutingTable run_dijkstra(char origin){
             // ...
         }
     }
-
-    
-
-
-    
 
     /***************************************************************************
      *              DATA HANDLING
