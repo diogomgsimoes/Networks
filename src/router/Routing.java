@@ -242,30 +242,25 @@ public class Routing {
             }
             win.Log(aux+")\n");
               
+            //Locate corresponding RouterInfo object in map
             RouterInfo router_info = new RouterInfo(win, sender, seq, TTL, data);
             
-            if (map.get(sender) != null) {
+            if(map.get(sender) != null){
                 RouterInfo fromMap = map.get(sender);
-                //&& router_info.vec_valid()
-                if ((fromMap.seq < seq)) {
-                    
-                    router_info.TTL = fromMap.TTL;
-                    map.replace(sender, router_info);
+                if ((fromMap.seq < seq) && router_info.vec_valid()){
+                   if (!mcast && ((TTL - 1) > 0)){
+                        router_info.update_vec(data, seq, TTL - 1);
+                        map.replace(sender, router_info); 
+                        dp = make_ROUTE_packet(sender, router_info.seq, router_info.TTL, router_info.vec);
+                        if(next_Hop(sender) != ' ')
+                            neig.send_packet(ds, dp, neig.locate_neig(sender)); 
+                    }
+                    else
+                        map.replace(sender, router_info); 
                 }
             }
             else
                 map.put(sender, router_info);
-            
-            if (!mcast) {
-                if (router_info.TTL - 1 > 0) {
-                    router_info.update_vec(data, seq, router_info.TTL - 1);
-                    //map.replace(sender, router_info);
-                    dp = make_ROUTE_packet(win.local_name(), route_seq++, router_info.TTL, data);
-                    TTL--;
-                    neig.send_packet(ds, dp, neig.locate_neig(sender)); 
-                    
-                }
-            }
            
             return true;    // If everything was done well
         } catch (IOException e) {
@@ -448,7 +443,6 @@ public RoutingTable run_dijkstra(char origin){
         }
         
         DatagramPacket dp = make_ROUTE_packet(win.local_name(), route_seq++, local_TTL, vec); 
-        //c = Arrays.toString(vec).
         
         try {
             if(!use_multicast) 
